@@ -1,30 +1,63 @@
-# Secure bank web app
+# BankScore
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/ahmednasser111s-projects/v0-secure-bank-web-app)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/lChd9KzGIoV)
+A secure web application for viewing banking information and credit scores.
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+BankScore allows users to log in with a user ID and view their dashboard, including:
+- Credit score breakdown
+- Recent transactions
+- Personal and account details
 
-## Deployment
 
-Your project is live at:
+## Live Demo
 
-**[https://vercel.com/ahmednasser111s-projects/v0-secure-bank-web-app](https://vercel.com/ahmednasser111s-projects/v0-secure-bank-web-app)**
+[https://bank-score.vercel.app/](https://bank-score.vercel.app/)
 
-## Build your app
+## Getting Started
 
-Continue building your app on:
+### Prerequisites
 
-**[https://v0.dev/chat/projects/lChd9KzGIoV](https://v0.dev/chat/projects/lChd9KzGIoV)**
+- Node.js (v18 or later)
+- npm or yarn
 
-## How It Works
+### Installation
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+```bash
+git clone https://https://github.com/ahmednasser111/bank-score.git
+cd bank-score
+npm install
+# or
+yarn install
+```
+
+### Running Locally
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Project Structure
+
+- `/app` – Next.js app directory (pages, layouts, components)
+- `/components` – Reusable UI components
+- `/lib` – Utility functions (e.g., credit score calculation)
+- `/styles` – Global styles (Tailwind CSS)
+
+## Usage
+
+1. Enter a user ID on the login page.
+2. View your dashboard with credit score, transactions, and details.
+3. Use the navigation tabs to explore different sections.
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests.
+
+## License
+
+This project is licensed under the MIT License.
