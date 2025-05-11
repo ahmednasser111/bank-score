@@ -18,13 +18,13 @@ import { Label } from "@/components/ui/label";
 export default function Home() {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (typeof window !== "undefined") {
-			const params = new URLSearchParams(window.location.search);
-			const error = params.get("error");
-			if (error) setErrorMsg(error);
-		}
-	}, []);
+	// useEffect(() => {
+	// 	if (typeof window !== "undefined") {
+	// 		const params = new URLSearchParams(window.location.search);
+	// 		const error = params.get("error");
+	// 		if (error) setErrorMsg(error);
+	// 	}
+	// }, []);
 
 	async function login(formData: FormData) {
 		// "use server";

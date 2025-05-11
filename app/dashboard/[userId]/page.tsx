@@ -1,49 +1,102 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, CreditCard, DollarSign, Users } from "lucide-react"
+import axios from "axios"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { calculateCreditScore } from "@/lib/credit-score"
-import { getUserData } from "@/lib/user-data"
 
-import React from "react"
+export default function DashboardPage({ params }: { params: Promise<{ userId: string }> }) {
+  const { userId } = React.use(params)
+  const router = useRouter()
 
-export default function DashboardPage({ params }: { params: { userId: string } }) {
-  const { userId } = params
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userData, setUserData] = useState<any>(null)
 
-  const userData = getUserData(userId)
+  useEffect(() => {
+    async function fetchUser() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await axios.get(`http://localhost:5000/get_user_data?user=${userId}`)
+        const data = res.data
+        if (!data || !data.user_data) throw new Error("User not found")
+        setUserData(data)
+      } catch (e: any) {
+        setError("User not found")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUser()
+  }, [userId])
 
-  // If user not found, show 404 page
-  if (!userData) {
-    notFound()
+  useEffect(() => {
+    if (error) {
+      router.replace("/not-found")
+    }
+  }, [error, router])
+
+  if (loading || !userData) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-lg text-slate-500">Loading...</div>
+      </div>
+    )
   }
 
-  // Calculate the credit score
-  const {
-    finalScore,
-    scaledScore,
-    paymentScore,
-    debtScore,
-    historyScore,
-    mixScore,
-    paymentData,
-    debtData,
-    historyData,
-    mixData,
-  } = calculateCreditScore(userId)
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-lg text-red-500">{error}</div>
+      </div>
+    )
+  }
 
-  // Format the score for display
-  const formattedScore = Math.round(scaledScore)
+  // Safely access API response data with optional chaining and defaults
+  const userArr = userData?.user_data ?? []
+  const iscore = userData?.iscore ?? {
+    paymentScore: 0,
+    debtScore: 0,
+    historyScore: 0,
+    mixScore: 0,
+    iscore: 0
+  }
+  const currentDebtArr = userData?.current_debt ?? ["0.00", "0.00"]
+  const lastPaymentArr = userData?.last_payment ?? ["", "pending"]
 
-  // Determine score category
+  const user = {
+    id: userArr[0],
+    name: userArr[1],
+    email: userArr[2],
+    phone: userArr[3],
+    accountOpenDate: new Date(userArr[4]).toISOString().split('T')[0],
+    accountType: "Standard",
+    currentDebt: parseFloat(currentDebtArr[0]),
+    creditLimit: parseFloat(currentDebtArr[1]),
+    lastPaymentDate: new Date(lastPaymentArr[0]).toISOString().split('T')[0],
+    lastPaymentAmount: lastPaymentArr[1] === "pending" ? "Pending" : parseFloat(lastPaymentArr[1]),
+  }
+
+  // iScore breakdown
+  const paymentScore = iscore.paymentScore * 100
+  const debtScore = iscore.debtScore * 100
+  const historyScore = iscore.historyScore * 100
+  const mixScore = iscore.mixScore * 100
+  const finalScore = iscore.iscore * 100
+  const scaledScore = Math.round(300 + (iscore.iscore * 550))
+  const formattedScore = scaledScore
+
+  // Score category
   let scoreCategory = "Poor"
   let scoreColor = "text-red-500"
-
   if (scaledScore >= 800) {
     scoreCategory = "Excellent"
     scoreColor = "text-green-600"
@@ -57,6 +110,15 @@ export default function DashboardPage({ params }: { params: { userId: string } }
     scoreCategory = "Fair"
     scoreColor = "text-yellow-500"
   }
+
+  // Only include the actual payment as a transaction if it's not pending
+  const transactions = [
+    {
+      description: "Last Payment",
+      date: user.lastPaymentDate,
+      amount: user.lastPaymentAmount === "Pending" ? null : user.lastPaymentAmount
+    }
+  ].filter(t => t.amount !== null)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -81,7 +143,7 @@ export default function DashboardPage({ params }: { params: { userId: string } }
             <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Welcome back,</span>
-              <span className="font-medium">{userData.name}</span>
+              <span className="font-medium">{user.name}</span>
             </div>
           </div>
 
@@ -111,11 +173,12 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                 <DollarSign className="h-4 w-4 text-blue-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">EGP {userData.currentDebt.toLocaleString()}</div>
+                <div className="text-3xl font-bold">EGP {user.currentDebt.toLocaleString()}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {debtData.usedCredit} of {debtData.creditLimit} credit limit
+                  {/* No credit limit in API, so just show debt */}
+                  {/* If you have credit limit, show it here */}
                 </div>
-                <Progress value={(debtData.usedCredit / debtData.creditLimit) * 100} className="mt-3 h-2" />
+                <Progress value={100} className="mt-3 h-2" />
               </CardContent>
             </Card>
 
@@ -125,9 +188,9 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                 <Users className="h-4 w-4 text-blue-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{userData.lastPaymentDate}</div>
+                <div className="text-3xl font-bold">{user.lastPaymentDate}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Amount: EGP {userData.lastPaymentAmount.toLocaleString()}
+                  Amount: {user.lastPaymentAmount === "Pending" ? "Pending" : `EGP ${user.lastPaymentAmount.toLocaleString()}`}
                 </div>
               </CardContent>
             </Card>
@@ -152,7 +215,7 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                       <div>
                         <div className="font-medium">Payment History (35%)</div>
                         <div className="text-sm text-muted-foreground">
-                          {paymentData.onTimePayments} on-time payments out of {paymentData.totalPayments}
+                          {/* No payment count in API */}
                         </div>
                       </div>
                       <div className="font-medium">{paymentScore.toFixed(0)}/100</div>
@@ -165,8 +228,7 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                       <div>
                         <div className="font-medium">Outstanding Debt (30%)</div>
                         <div className="text-sm text-muted-foreground">
-                          Using EGP {debtData.usedCredit.toLocaleString()} of EGP{" "}
-                          {debtData.creditLimit.toLocaleString()} limit
+                          {/* No credit limit in API */}
                         </div>
                       </div>
                       <div className="font-medium">{debtScore.toFixed(0)}/100</div>
@@ -179,7 +241,7 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                       <div>
                         <div className="font-medium">Credit History Age (15%)</div>
                         <div className="text-sm text-muted-foreground">
-                          {historyData.accountAge} years out of {historyData.maxPossibleAge} years
+                          {/* No account age in API */}
                         </div>
                       </div>
                       <div className="font-medium">{historyScore.toFixed(0)}/100</div>
@@ -192,7 +254,7 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                       <div>
                         <div className="font-medium">Credit Mix (20%)</div>
                         <div className="text-sm text-muted-foreground">
-                          {mixData.creditTypesUsed} types used out of {mixData.totalTypesTracked} possible types
+                          {/* No credit mix details in API */}
                         </div>
                       </div>
                       <div className="font-medium">{mixScore.toFixed(0)}/100</div>
@@ -222,17 +284,24 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {userData.transactions.map((transaction, index) => (
-                      <div key={index} className="flex items-center justify-between border-b pb-2">
-                        <div>
-                          <div className="font-medium">{transaction.description}</div>
-                          <div className="text-sm text-muted-foreground">{transaction.date}</div>
+                    {transactions.length > 0 ? (
+                      transactions.map((transaction, index) => (
+                        <div key={index} className="flex items-center justify-between border-b pb-2">
+                          <div>
+                            <div className="font-medium">{transaction.description}</div>
+                            <div className="text-sm text-muted-foreground">{transaction.date}</div>
+                          </div>
+                          <div className={typeof transaction.amount === 'number' ? (transaction.amount < 0 ? "text-red-500" : "text-green-500") : "text-yellow-500"}>
+                            {typeof transaction.amount === 'number' ? 
+                              `${transaction.amount < 0 ? "-" : "+"} EGP ${Math.abs(transaction.amount).toLocaleString()}` : 
+                              "Pending"
+                            }
+                          </div>
                         </div>
-                        <div className={transaction.amount < 0 ? "text-red-500" : "text-green-500"}>
-                          {transaction.amount < 0 ? "-" : "+"} EGP {Math.abs(transaction.amount).toLocaleString()}
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <div className="text-center text-muted-foreground py-4">No recent transactions</div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -249,31 +318,31 @@ export default function DashboardPage({ params }: { params: { userId: string } }
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">Full Name</div>
-                        <div>{userData.name}</div>
+                        <div>{user.name}</div>
                       </div>
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">User ID</div>
-                        <div>{userData.id}</div>
+                        <div>{user.id}</div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">Phone Number</div>
-                        <div>{userData.phone}</div>
+                        <div>{user.phone}</div>
                       </div>
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">Email</div>
-                        <div>{userData.email}</div>
+                        <div>{user.email}</div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">Account Opened</div>
-                        <div>{userData.accountOpenDate}</div>
+                        <div>{user.accountOpenDate}</div>
                       </div>
                       <div>
                         <div className="text-sm font-medium text-muted-foreground">Account Type</div>
-                        <div>{userData.accountType}</div>
+                        <div>{user.accountType}</div>
                       </div>
                     </div>
                   </div>
